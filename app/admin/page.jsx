@@ -562,25 +562,25 @@ export default function AdminDashboard() {
                   <div className="p-4 rounded-xl bg-[#141414] border border-[#242424]">
                     <div className="text-[11px] text-neutral-400 uppercase font-semibold">Total Teams</div>
                     <div className="text-2xl font-extrabold text-white mt-1">
-                      {progressData.teamCoverage.total}
+                      {progressData?.teamCoverage?.total ?? progressData?.summary?.totalTeams ?? 0}
                     </div>
                   </div>
                   <div className="p-4 rounded-xl bg-[#141414] border border-[#242424]">
                     <div className="text-[11px] text-green-400 uppercase font-semibold">Fully Scored (3/3)</div>
                     <div className="text-2xl font-extrabold text-green-400 mt-1">
-                      {progressData.teamCoverage.fullyScored}
+                      {progressData?.teamCoverage?.fullyScored ?? progressData?.summary?.teamsFullyScored ?? 0}
                     </div>
                   </div>
                   <div className="p-4 rounded-xl bg-[#141414] border border-[#242424]">
                     <div className="text-[11px] text-amber-400 uppercase font-semibold">Partially Scored</div>
                     <div className="text-2xl font-extrabold text-amber-400 mt-1">
-                      {progressData.teamCoverage.partiallyScored}
+                      {progressData?.teamCoverage?.partiallyScored ?? progressData?.summary?.teamsPartiallyScored ?? 0}
                     </div>
                   </div>
                   <div className="p-4 rounded-xl bg-[#141414] border border-[#242424]">
                     <div className="text-[11px] text-red-400 uppercase font-semibold">Unscored (0/3)</div>
                     <div className="text-2xl font-extrabold text-red-400 mt-1">
-                      {progressData.teamCoverage.unscored}
+                      {progressData?.teamCoverage?.unscored ?? progressData?.summary?.teamsUnscored ?? 0}
                     </div>
                   </div>
                 </div>
@@ -604,7 +604,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#1c1c1c]">
-                        {progressData.evaluatorStats.map((e) => (
+                        {(progressData?.evaluatorStats || []).map((e) => (
                           <tr key={e.username} className="hover:bg-[#181818]">
                             <td className="py-2.5 font-mono text-[#ff7a1a] font-semibold">{e.username}</td>
                             <td className="py-2.5 text-neutral-200">{e.displayName}</td>

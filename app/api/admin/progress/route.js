@@ -73,6 +73,10 @@ export async function GET(request) {
       };
     });
 
+    const fullyScored = teamProgress.filter((t) => t.isComplete).length;
+    const partiallyScored = teamProgress.filter((t) => t.collected > 0 && !t.isComplete).length;
+    const unscored = teamProgress.filter((t) => t.collected === 0).length;
+
     // 6. Build per-evaluator statistics
     const evaluatorsRes = await query('SELECT id, username, display_name FROM evaluators ORDER BY id ASC');
     const evaluatorStats = evaluatorsRes.rows.map((ev) => {
@@ -85,9 +89,13 @@ export async function GET(request) {
           displayName: ev.display_name,
           teamsScored: 0,
           averageGiven: null,
+          averageMark: null,
           minGiven: null,
+          minMark: null,
           maxGiven: null,
+          maxMark: null,
           spread: null,
+          stdDev: null,
         };
       }
 
@@ -97,15 +105,23 @@ export async function GET(request) {
       const max = Math.max(...evMarks);
       const spread = Math.round((max - min) * 100) / 100;
 
+      // Standard deviation
+      const variance = evMarks.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / count;
+      const stdDev = Math.round(Math.sqrt(variance) * 100) / 100;
+
       return {
         id: ev.id,
         username: ev.username,
         displayName: ev.display_name,
         teamsScored: count,
         averageGiven: avg,
+        averageMark: avg,
         minGiven: min,
+        minMark: min,
         maxGiven: max,
+        maxMark: max,
         spread,
+        stdDev,
       };
     });
 
@@ -116,9 +132,15 @@ export async function GET(request) {
         totalExpectedMarks,
         totalCollectedMarks,
         percentComplete: totalExpectedMarks > 0 ? Math.round((totalCollectedMarks / totalExpectedMarks) * 100) : 0,
-        teamsFullyScored: teamProgress.filter((t) => t.isComplete).length,
-        teamsPartiallyScored: teamProgress.filter((t) => t.collected > 0 && !t.isComplete).length,
-        teamsUnscored: teamProgress.filter((t) => t.collected === 0).length,
+        teamsFullyScored: fullyScored,
+        teamsPartiallyScored: partiallyScored,
+        teamsUnscored: unscored,
+      },
+      teamCoverage: {
+        total: teams.length,
+        fullyScored,
+        partiallyScored,
+        unscored,
       },
       teamProgress,
       evaluatorStats,
@@ -127,4 +149,3 @@ export async function GET(request) {
     return NextResponse.json({ error: err.message }, { status: 403 });
   }
 }
-
