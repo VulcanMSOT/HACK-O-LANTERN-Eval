@@ -335,19 +335,19 @@ export default function EvaluatorDashboard() {
                       onClick={() => handleOpenScoreModal(team)}
                       className="p-3.5 rounded-xl bg-[#121212] hover:bg-[#181818] border border-[#242424] hover:border-[#ff7a1a]/40 cursor-pointer active:scale-[0.99] transition-all flex items-center justify-between"
                     >
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-mono text-xs font-bold text-[#ff7a1a]">{team.id}</span>
-                          <span className="text-xs font-bold text-white">{team.name}</span>
+                      <div className="flex-1 min-w-0 mr-3">
+                        <div className="flex items-center space-x-2 flex-wrap gap-y-0.5">
+                          <span className="font-mono text-xs font-bold text-[#ff7a1a] flex-shrink-0">{team.id}</span>
+                          <span className="text-xs sm:text-sm font-bold text-white break-words">{team.name}</span>
                           {team.status === 'finalist' && (
-                            <span className="text-[9px] font-bold bg-amber-950/80 border border-amber-700 text-amber-300 px-1.5 py-0.2 rounded">
+                            <span className="text-[9px] font-bold bg-amber-950/80 border border-amber-700 text-amber-300 px-1.5 py-0.2 rounded flex-shrink-0">
                               Finalist
                             </span>
                           )}
                         </div>
                         <div className="flex items-center space-x-2 mt-1">
                           <span className="text-[11px] text-neutral-400 flex items-center space-x-1">
-                            <Clock className="w-3 h-3 text-neutral-500" />
+                            <Clock className="w-3 h-3 text-neutral-500 flex-shrink-0" />
                             <span>
                               {team.marksCount} of {team.limit} scored
                             </span>
@@ -355,7 +355,7 @@ export default function EvaluatorDashboard() {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
                         <span className="text-[11px] font-semibold text-[#ff7a1a] bg-[#ff7a1a]/10 border border-[#ff7a1a]/30 px-2.5 py-1 rounded-lg">
                           Score
                         </span>
@@ -501,3 +501,4 @@ export default function EvaluatorDashboard() {
     </div>
   );
 }
+

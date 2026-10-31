@@ -6,13 +6,12 @@ export async function GET() {
   try {
     const user = await requireEvaluator();
 
-    // Fetch the open round (if any)
-    const openRes = await query(
-      'SELECT round_number, label, max_marks, evaluators_per_team, status FROM rounds WHERE status = $1 ORDER BY round_number ASC LIMIT 1',
-      ['open']
+    // Fetch all rounds
+    const roundsRes = await query(
+      'SELECT round_number, label, max_marks, evaluators_per_team, status FROM rounds ORDER BY round_number ASC'
     );
-
-    const openRound = openRes.rows[0] || null;
+    const rounds = roundsRes.rows;
+    const openRound = rounds.find((r) => r.status === 'open') || null;
 
     let userScoredCount = 0;
     if (openRound) {
@@ -24,6 +23,7 @@ export async function GET() {
     }
 
     return NextResponse.json({
+      rounds,
       openRound,
       userScoredCount,
     });
@@ -31,3 +31,4 @@ export async function GET() {
     return NextResponse.json({ error: err.message }, { status: 401 });
   }
 }
+

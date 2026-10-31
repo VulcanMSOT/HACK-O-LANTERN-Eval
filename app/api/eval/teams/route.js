@@ -25,8 +25,8 @@ export async function GET() {
 
     // 2. Fetch eligible teams
     const teamsQuery = isFinal
-      ? "SELECT id, name, status FROM teams WHERE status = 'finalist' ORDER BY id ASC"
-      : "SELECT id, name, status FROM teams WHERE status != 'dropped' ORDER BY id ASC";
+      ? "SELECT id, name, normalised_name, status FROM teams WHERE status = 'finalist' ORDER BY id ASC"
+      : "SELECT id, name, normalised_name, status FROM teams WHERE status != 'dropped' ORDER BY id ASC";
 
     const teamsRes = await query(teamsQuery);
     const teams = teamsRes.rows;
@@ -59,11 +59,14 @@ export async function GET() {
       return {
         id: t.id,
         name: t.name,
+        normalised_name: t.normalised_name,
         status: t.status,
         scoredCount,
+        marksCount: scoredCount,
         limit,
         userScored,
         userMark,
+        myScore: userScored ? { value: userMark } : null,
         isFull,
         canScore,
       };
@@ -98,3 +101,4 @@ export async function GET() {
     return NextResponse.json({ error: err.message }, { status: 401 });
   }
 }
+

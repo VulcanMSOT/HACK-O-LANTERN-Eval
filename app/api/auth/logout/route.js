@@ -7,3 +7,4 @@ export async function POST() {
   response.cookies.set(cookieOptions.name, '', { ...cookieOptions, maxAge: 0 });
   return response;
 }
+

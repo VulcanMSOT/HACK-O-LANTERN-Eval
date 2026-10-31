@@ -764,7 +764,7 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setAdvanceModal(true)}
                   className="bg-[#ff7a1a] hover:bg-[#e5680d] text-black font-bold px-3.5 py-2 rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-[#ff7a1a]/20"
@@ -1403,3 +1403,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

@@ -8,6 +8,12 @@ export async function GET() {
   }
   return NextResponse.json({
     authenticated: true,
+    user: {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+    },
     evaluator: {
       id: user.id,
       username: user.username,
@@ -16,3 +22,4 @@ export async function GET() {
     },
   });
 }
+

@@ -125,3 +125,4 @@ ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE snack_slots ENABLE ROW LEVEL SECURITY;
 ALTER TABLE snack_given ENABLE ROW LEVEL SECURITY;
 -- No public policies created. Backend server routes connect using DATABASE_URL.
+

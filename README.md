@@ -57,3 +57,4 @@ npm run dev
 4. Keep track of evaluator coverage on the Admin Progress page ("Teams scored X of 33").
 5. After Round 3 is complete, lock Round 3 and execute the "Advance top 10" flow.
 6. Set Final round max marks and ranking rule before opening Round 4.
+
