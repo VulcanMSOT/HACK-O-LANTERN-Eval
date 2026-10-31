@@ -465,9 +465,15 @@ export default function EvaluatorDashboard() {
             ) : (
               <form onSubmit={handleSubmitScore} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-2">
-                    Enter Marks (0 - {currentRoundObj.max_marks})
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                      Enter Marks
+                    </label>
+                    <span className="text-[11px] font-mono font-bold text-[#ff7a1a]">
+                      Max: {currentRoundObj.max_marks ?? 100}
+                    </span>
+                  </div>
+
                   <input
                     type="number"
                     step="any"
@@ -477,18 +483,54 @@ export default function EvaluatorDashboard() {
                     autoFocus
                     value={scoreInput}
                     onChange={(e) => setScoreInput(e.target.value)}
-                    placeholder="Enter mark"
-                    className="w-full bg-[#1c1c1c] border border-[#333333] rounded-xl px-4 py-3 text-2xl font-mono text-center text-white focus:outline-none focus:border-[#ff7a1a] focus:ring-1 focus:ring-[#ff7a1a]"
+                    placeholder="0"
+                    className="w-full bg-[#1c1c1c] border border-white/10 rounded-2xl px-4 py-3 text-3xl font-mono font-black text-center text-white focus:outline-none focus:border-[#ff7a1a] focus:ring-2 focus:ring-[#ff7a1a]/30 shadow-inner transition-all"
                   />
+
+                  {/* Rapid Score Quick Increment Chips */}
+                  <div className="flex items-center justify-center space-x-1.5 mt-3">
+                    {[1, 5, 10].map((inc) => (
+                      <button
+                        key={inc}
+                        type="button"
+                        onClick={() => {
+                          const current = Number(scoreInput) || 0;
+                          const max = Number(currentRoundObj.max_marks || 100);
+                          setScoreInput(String(Math.min(max, current + inc)));
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-xs font-mono font-bold text-neutral-200 border border-white/5 transition-transform"
+                      >
+                        +{inc}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (currentRoundObj.max_marks !== null) {
+                          setScoreInput(String(currentRoundObj.max_marks));
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#ff7a1a]/15 hover:bg-[#ff7a1a]/25 text-[#ff7a1a] active:scale-95 text-xs font-mono font-bold border border-[#ff7a1a]/30 transition-transform"
+                    >
+                      Max
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScoreInput('0')}
+                      className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-xs font-mono font-bold text-neutral-400 border border-white/5 transition-transform"
+                    >
+                      Reset
+                    </button>
+                  </div>
                 </div>
 
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-[#ff7a1a] hover:bg-[#e5680d] active:scale-[0.98] text-black font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-md shadow-[#ff7a1a]/20 disabled:opacity-50"
+                  className="w-full bg-[#ff7a1a] hover:bg-[#e5680d] active:scale-[0.97] text-black font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-[#ff7a1a]/25 disabled:opacity-50"
                 >
                   {submitting
-                    ? 'Submitting...'
+                    ? 'Recording Mark...'
                     : activeTeam.myScore
                     ? 'Update My Mark'
                     : 'Confirm & Submit Mark'}

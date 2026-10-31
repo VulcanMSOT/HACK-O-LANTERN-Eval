@@ -529,7 +529,7 @@ export default function AdminDashboard() {
         {/* ======================================================== */}
         {activeTab === 'progress' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-bold text-white">Scoring Progress & Evaluator Analytics</h2>
                 <p className="text-xs text-neutral-400 mt-0.5">
@@ -637,7 +637,7 @@ export default function AdminDashboard() {
         {/* ======================================================== */}
         {activeTab === 'matrix' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-bold text-white">Marks Matrix (Teams × Evaluators)</h2>
                 <p className="text-xs text-neutral-400 mt-0.5">
