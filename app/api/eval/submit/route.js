@@ -6,7 +6,7 @@ export async function POST(request) {
   let client;
   try {
     const user = await requireEvaluator();
-    const { teamId, roundNumber, value } = await request.json();
+    const { teamId, roundNumber, value, parameters } = await request.json();
 
     const cleanTeamId = String(teamId || '').trim();
     const roundNum = Number(roundNumber);
@@ -82,8 +82,8 @@ export async function POST(request) {
       // Edit existing mark
       const existing = existingMarkRes.rows[0];
       await client.query(
-        'UPDATE marks SET value = $1, updated_at = NOW() WHERE id = $2',
-        [numValue, existing.id]
+        'UPDATE marks SET value = $1, parameters = $2, updated_at = NOW() WHERE id = $3',
+        [numValue, parameters ? JSON.stringify(parameters) : null, existing.id]
       );
 
       await client.query(
@@ -117,10 +117,10 @@ export async function POST(request) {
 
     // 5. Insert new mark
     const insertRes = await client.query(
-      `INSERT INTO marks (team_id, evaluator_id, round_number, value)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO marks (team_id, evaluator_id, round_number, value, parameters)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id`,
-      [cleanTeamId, user.id, roundNum, numValue]
+      [cleanTeamId, user.id, roundNum, numValue, parameters ? JSON.stringify(parameters) : null]
     );
 
     await client.query(

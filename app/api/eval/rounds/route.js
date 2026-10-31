@@ -8,7 +8,7 @@ export async function GET() {
 
     // Fetch all rounds
     const roundsRes = await query(
-      'SELECT round_number, label, max_marks, evaluators_per_team, status FROM rounds ORDER BY round_number ASC'
+      'SELECT round_number, label, max_marks, evaluators_per_team, status, parameters FROM rounds ORDER BY round_number ASC'
     );
     const rounds = roundsRes.rows;
     const openRound = rounds.find((r) => r.status === 'open') || null;

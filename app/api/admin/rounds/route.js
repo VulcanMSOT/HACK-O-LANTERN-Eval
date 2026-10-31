@@ -52,6 +52,8 @@ async function handleRoundUpdate(request) {
     if (effectiveAction === 'configure') {
       const parsedMax = maxMarks !== undefined ? (maxMarks === null ? null : Number(maxMarks)) : currentRound.max_marks;
       const parsedEvPerTeam = evaluatorsPerTeam ? Number(evaluatorsPerTeam) : currentRound.evaluators_per_team;
+      const roundLabel = body.label ? String(body.label).trim() : currentRound.label;
+      const roundParams = body.parameters !== undefined ? body.parameters : currentRound.parameters;
 
       if (parsedMax !== null && (isNaN(parsedMax) || parsedMax <= 0)) {
         await client.query('ROLLBACK');
@@ -59,8 +61,8 @@ async function handleRoundUpdate(request) {
       }
 
       await client.query(
-        'UPDATE rounds SET max_marks = $1, evaluators_per_team = $2, updated_at = NOW() WHERE round_number = $3',
-        [parsedMax, parsedEvPerTeam, roundNum]
+        'UPDATE rounds SET max_marks = $1, evaluators_per_team = $2, label = $3, parameters = $4, updated_at = NOW() WHERE round_number = $5',
+        [parsedMax, parsedEvPerTeam, roundLabel, roundParams ? JSON.stringify(roundParams) : null, roundNum]
       );
 
       // If updating Final ranking rule in settings

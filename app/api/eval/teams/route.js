@@ -9,7 +9,7 @@ export async function GET(request) {
     const roundNumber = Number(searchParams.get('round') || 1);
 
     const roundRes = await query(
-      'SELECT round_number, label, max_marks, evaluators_per_team, status FROM rounds WHERE round_number = $1',
+      'SELECT round_number, label, max_marks, evaluators_per_team, status, parameters FROM rounds WHERE round_number = $1',
       [roundNumber]
     );
 
@@ -37,7 +37,7 @@ export async function GET(request) {
 
     // 3. Fetch marks for this round to compute slot counts and user's mark
     const marksRes = await query(
-      `SELECT team_id, evaluator_id, value
+      `SELECT team_id, evaluator_id, value, parameters
        FROM marks
        WHERE round_number = $1 AND removed = false`,
       [round.round_number]
@@ -49,14 +49,15 @@ export async function GET(request) {
     marksRes.rows.forEach((m) => {
       teamMarksCount.set(m.team_id, (teamMarksCount.get(m.team_id) || 0) + 1);
       if (m.evaluator_id === user.id) {
-        userMarks.set(m.team_id, Number(m.value));
+        userMarks.set(m.team_id, { value: Number(m.value), parameters: m.parameters });
       }
     });
 
     const enrichedTeams = teams.map((t) => {
       const scoredCount = teamMarksCount.get(t.id) || 0;
       const userScored = userMarks.has(t.id);
-      const userMark = userScored ? userMarks.get(t.id) : null;
+      const userMarkData = userScored ? userMarks.get(t.id) : null;
+      const userMark = userMarkData ? userMarkData.value : null;
       const isFull = scoredCount >= limit;
       const canScore = !userScored && !isFull;
 
@@ -72,7 +73,7 @@ export async function GET(request) {
         limit,
         userScored,
         userMark,
-        myScore: userScored ? { value: userMark } : null,
+        myScore: userScored ? { value: userMark, parameters: userMarkData?.parameters } : null,
         isFull,
         canScore,
       };

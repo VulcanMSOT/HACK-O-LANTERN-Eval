@@ -20,7 +20,70 @@ import {
   Lock,
   Unlock,
   X,
+  Plus,
+  Sliders,
+  Check,
 } from 'lucide-react';
+
+const OFFICIAL_TRACKS = [
+  {
+    number: 1,
+    title: "The Witch's Potion Pantry",
+    category: 'AI + Full Stack + Web + Android',
+    desc: 'Demand forecasting, full-moon spike handling, anomaly detection, and cross-platform inventory dashboard.',
+  },
+  {
+    number: 2,
+    title: 'The Midnight Phantom Hotline',
+    category: 'AI + Systems',
+    desc: 'Hinglish voice agent under 800 ms: code-mixed appointment/railway bookings, interruption handling, and 3G resilience.',
+  },
+  {
+    number: 3,
+    title: 'The Possessed Butler',
+    category: 'AI Security',
+    desc: 'Prompt-injection-proof AI agent: autonomous LLM agent that executes tasks safely while neutralizing prompt injections & secret leakage.',
+  },
+  {
+    number: 4,
+    title: 'The Midnight Crossroads',
+    category: 'Computer Vision + Reinforcement Learning',
+    desc: 'Indian traffic signal optimizer: CCTV queue estimation in mixed traffic and SUMO signal control to cut wait times.',
+  },
+  {
+    number: 5,
+    title: 'The Coven of Five Hospitals',
+    category: 'Privacy + Machine Learning',
+    desc: 'Federated learning with privacy: multi-hospital diagnostic model, zero raw data sharing, differential privacy, and Soul Thief defense.',
+  },
+];
+
+const DEFAULT_ROUND_RUBRICS = {
+  1: [
+    { id: 'arch', name: 'System Architecture & Setup', max: 2.5, desc: 'Tech stack, DB schema, project scaffolding' },
+    { id: 'core_flow', name: 'Core Flow & Basic Demo', max: 3.0, desc: 'End-to-end basic pipeline working end to end' },
+    { id: 'integration', name: 'Backend & Data Integration', max: 2.5, desc: 'APIs, CRUD operations, database connection' },
+    { id: 'code_quality', name: 'Code Quality & Approach', max: 2.0, desc: 'Clean codebase, structure, and error handling' },
+  ],
+  2: [
+    { id: 'core_features', name: 'Core Feature Progress', max: 3.0, desc: 'Public test data flow and functional progress' },
+    { id: 'curse', name: 'Midnight Curse Adaptation', max: 3.0, desc: 'Progress on the 12:00 AM track twist / curse' },
+    { id: 'performance', name: 'Performance & Metrics', max: 2.0, desc: 'Latency, throughput, model accuracy, or speed' },
+    { id: 'ui_ux', name: 'UI/UX & Interface Polish', max: 2.0, desc: 'Frontend visual polish, controls, and feedback' },
+  ],
+  3: [
+    { id: 'hidden_tests', name: 'Hidden Tests & Edge Cases', max: 3.5, desc: 'Behavior on hidden test sets and boundary conditions' },
+    { id: 'curse_robustness', name: 'Curse Mastery & Defense', max: 2.5, desc: 'Full curse implementation and live attack resilience' },
+    { id: 'completeness', name: 'Completeness & Stability', max: 2.5, desc: 'Robust end-to-end system without fatal crashes' },
+    { id: 'code_freeze', name: 'Code Freeze & Readme', max: 1.5, desc: 'Frozen commit verification and setup documentation' },
+  ],
+  4: [
+    { id: 'live_demo', name: 'Live Demo Execution', max: 3.5, desc: 'Flawless live presentation and demo to judges' },
+    { id: 'innovation', name: 'Innovation & Tech Depth', max: 2.5, desc: 'Technical complexity, originality and creative approach' },
+    { id: 'scalability', name: 'Architecture & Scalability', max: 2.0, desc: 'Clean engineering design, scalability, and impact' },
+    { id: 'defense_qa', name: 'Q&A Defense & Articulation', max: 2.0, desc: 'Convincing responses during 4 min judge Q&A' },
+  ],
+};
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -66,6 +129,21 @@ export default function AdminDashboard() {
   const [togglingPs, setTogglingPs] = useState(false);
   const [showPsModal, setShowPsModal] = useState(false);
   const [psSearch, setPsSearch] = useState('');
+
+  // Editing Team Details Modal
+  const [editingTeam, setEditingTeam] = useState(null);
+  const [editTeamName, setEditTeamName] = useState('');
+  const [editTrackNum, setEditTrackNum] = useState(1);
+  const [editPsText, setEditPsText] = useState('');
+  const [savingTeamEdit, setSavingTeamEdit] = useState(false);
+
+  // Editing Round & Rubrics Modal
+  const [editingRound, setEditingRound] = useState(null);
+  const [editRoundLabel, setEditRoundLabel] = useState('');
+  const [editRoundMaxMarks, setEditRoundMaxMarks] = useState('');
+  const [editRoundEvaluators, setEditRoundEvaluators] = useState('3');
+  const [editRoundParams, setEditRoundParams] = useState([]);
+  const [savingRoundEdit, setSavingRoundEdit] = useState(false);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -137,6 +215,151 @@ export default function AdminDashboard() {
       alert(err.message);
     } finally {
       setTogglingPs(false);
+    }
+  };
+
+  // Handlers for Editing Team Details & Problem Statement
+  const handleOpenEditTeam = (team) => {
+    setEditingTeam(team);
+    setEditTeamName(team.name || '');
+    setEditTrackNum(team.track_number !== null && team.track_number !== undefined ? team.track_number : 'custom');
+    setEditPsText(team.problem_statement || `Track 1: ${OFFICIAL_TRACKS[0].title} (${OFFICIAL_TRACKS[0].category})`);
+  };
+
+  const handleTrackSelectChange = (trackChoice) => {
+    if (trackChoice === 'custom') {
+      setEditTrackNum('custom');
+    } else {
+      const num = Number(trackChoice);
+      setEditTrackNum(num);
+      const trackObj = OFFICIAL_TRACKS.find((t) => t.number === num);
+      if (trackObj) {
+        setEditPsText(`Track ${trackObj.number}: ${trackObj.title} (${trackObj.category})`);
+      }
+    }
+  };
+
+  const handleSaveTeamEdit = async (e) => {
+    e.preventDefault();
+    if (!editingTeam) return;
+    setSavingTeamEdit(true);
+    try {
+      const res = await fetch('/api/admin/problem-statement/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: editingTeam.id,
+          teamName: editTeamName,
+          problemStatement: editPsText,
+          trackNumber: editTrackNum === 'custom' ? null : editTrackNum,
+          action: 'update',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update team details.');
+      showToast(data.message || 'Team details updated successfully!');
+      setEditingTeam(null);
+      fetchPsData();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingTeamEdit(false);
+    }
+  };
+
+  const handleClearTeamSubmission = async () => {
+    if (!editingTeam) return;
+    if (!confirm(`Are you sure you want to reset ${editingTeam.name} (${editingTeam.id}) back to Pending?`)) return;
+    setSavingTeamEdit(true);
+    try {
+      const res = await fetch('/api/admin/problem-statement/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: editingTeam.id,
+          action: 'clear',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to clear submission.');
+      showToast(data.message || 'Submission cleared.');
+      setEditingTeam(null);
+      fetchPsData();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingTeamEdit(false);
+    }
+  };
+
+  // Handlers for Editing Round Details & Parameter Rubrics
+  const handleOpenEditRound = (r) => {
+    setEditingRound(r);
+    setEditRoundLabel(r.label || `Round ${r.round_number}`);
+    setEditRoundMaxMarks(r.max_marks !== null && r.max_marks !== undefined ? String(r.max_marks) : '10');
+    setEditRoundEvaluators(String(r.evaluators_per_team || 3));
+    const initialParams = (r.parameters && Array.isArray(r.parameters) && r.parameters.length > 0)
+      ? r.parameters
+      : (DEFAULT_ROUND_RUBRICS[r.round_number] || []);
+    setEditRoundParams(JSON.parse(JSON.stringify(initialParams)));
+  };
+
+  const handleParamItemChange = (index, field, value) => {
+    setEditRoundParams((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: field === 'max' ? Number(value) || 0 : value };
+      return copy;
+    });
+  };
+
+  const handleAddParamItem = () => {
+    setEditRoundParams((prev) => [
+      ...prev,
+      {
+        id: `param_${Date.now()}`,
+        name: 'New Evaluation Parameter',
+        max: 2.5,
+        desc: 'Criteria and guidance for judges',
+      },
+    ]);
+  };
+
+  const handleRemoveParamItem = (index) => {
+    setEditRoundParams((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleResetParamsToDefault = () => {
+    if (!editingRound) return;
+    const def = DEFAULT_ROUND_RUBRICS[editingRound.round_number] || [];
+    setEditRoundParams(JSON.parse(JSON.stringify(def)));
+  };
+
+  const handleSaveRoundEdit = async (e) => {
+    e.preventDefault();
+    if (!editingRound) return;
+    setSavingRoundEdit(true);
+    try {
+      const res = await fetch('/api/admin/rounds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roundNumber: editingRound.round_number,
+          action: 'configure',
+          label: editRoundLabel,
+          maxMarks: editRoundMaxMarks ? Number(editRoundMaxMarks) : null,
+          evaluatorsPerTeam: Number(editRoundEvaluators) || 3,
+          parameters: editRoundParams,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update round configuration.');
+      showToast(data.message || 'Round configuration updated!');
+      setEditingRound(null);
+      fetchRoundsAndSettings();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingRoundEdit(false);
     }
   };
 
@@ -638,6 +861,26 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
+                    {/* Parameter Rubrics Breakdown Preview */}
+                    <div className="bg-[#181818] p-3 rounded-xl border border-[#262626] space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-neutral-400 font-semibold uppercase tracking-wider text-[10px]">
+                          Scoring Rubrics (Parameters)
+                        </span>
+                        <span className="text-[#ffa95c] font-mono font-bold">
+                          {(r.parameters && Array.isArray(r.parameters) && r.parameters.length > 0 ? r.parameters : (DEFAULT_ROUND_RUBRICS[r.round_number] || [])).length} criteria · {r.max_marks ?? 10}m max
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                        {(r.parameters && Array.isArray(r.parameters) && r.parameters.length > 0 ? r.parameters : (DEFAULT_ROUND_RUBRICS[r.round_number] || [])).map((p, idx) => (
+                          <div key={p.id || idx} className="flex items-center justify-between text-xs py-1 px-2.5 rounded-lg bg-white/5 border border-white/5">
+                            <span className="text-neutral-300 font-medium truncate mr-2 text-[11px]">{p.name}</span>
+                            <span className="font-mono text-[#ff7a1a] font-bold flex-shrink-0 text-[11px]">{p.max}m</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     {isFinal && (
                       <div className="text-[11px] text-amber-300 bg-amber-950/40 border border-amber-800/60 p-2.5 rounded-xl">
                         Final Round: Requires Max Marks and Final Ranking Rule before opening. Scored teams must
@@ -645,7 +888,16 @@ export default function AdminDashboard() {
                       </div>
                     )}
 
-                    <div className="flex items-center space-x-2 pt-2 border-t border-[#1f1f1f]">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#1f1f1f]">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditRound(r)}
+                        className="flex-1 bg-[#1e172e] hover:bg-[#2b2142] text-[#ffa95c] border border-[#ff7a1a]/30 font-bold py-2 rounded-xl text-xs flex items-center justify-center space-x-1.5 transition-colors"
+                      >
+                        <Sliders className="w-3.5 h-3.5" />
+                        <span>Edit Details & Rubrics</span>
+                      </button>
+
                       {isNotStarted && (
                         <button
                           onClick={() => {
@@ -1611,6 +1863,7 @@ export default function AdminDashboard() {
                     <th className="py-2.5 px-3">Status</th>
                     <th className="py-2.5 px-3">Problem Statement / Track</th>
                     <th className="py-2.5 px-3 text-right">Submitted</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -1653,6 +1906,16 @@ export default function AdminDashboard() {
                         <td className="py-2.5 px-3 text-right whitespace-nowrap text-[11px] font-mono text-neutral-400">
                           {t.submitted_at ? new Date(t.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
                         </td>
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditTeam(t)}
+                            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-[#241c38] hover:bg-[#342752] border border-[#ff7a1a]/30 text-white font-semibold text-[11px] transition-colors"
+                          >
+                            <Edit2 className="w-3 h-3 text-[#ff7a1a]" />
+                            <span>Edit</span>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
@@ -1671,6 +1934,293 @@ export default function AdminDashboard() {
                 Done
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: EDIT TEAM DETAILS & TRACK ALLOCATION */}
+      {/* ======================================================== */}
+      {editingTeam && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-[#140f21] border border-[#3d2f5a] rounded-2xl p-6 shadow-2xl relative space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-[#ffa95c] uppercase tracking-widest">
+                  ADMIN OVERRIDE
+                </span>
+                <h3 className="text-base font-bold text-white mt-0.5">
+                  Edit Details: <span className="text-[#ff7a1a]">{editingTeam.id}</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTeam(null)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTeamEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 uppercase mb-1">
+                  Team Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTeamName}
+                  onChange={(e) => setEditTeamName(e.target.value)}
+                  className="w-full bg-[#1e172e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#ff7a1a]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 uppercase mb-1">
+                  Track Selection
+                </label>
+                <select
+                  value={editTrackNum}
+                  onChange={(e) => handleTrackSelectChange(e.target.value)}
+                  className="w-full bg-[#1e172e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#ff7a1a]"
+                >
+                  {OFFICIAL_TRACKS.map((track) => (
+                    <option key={track.number} value={track.number}>
+                      Track {track.number}: {track.title} ({track.category})
+                    </option>
+                  ))}
+                  <option value="custom">Custom Problem Statement</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 uppercase mb-1">
+                  Problem Statement Description / Title
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editPsText}
+                  onChange={(e) => setEditPsText(e.target.value)}
+                  placeholder="Enter problem statement details..."
+                  className="w-full bg-[#1e172e] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-[#ff7a1a]"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-2 border-t border-white/10">
+                {editingTeam.submission_id ? (
+                  <button
+                    type="button"
+                    onClick={handleClearTeamSubmission}
+                    disabled={savingTeamEdit}
+                    className="px-3 py-2 rounded-xl bg-red-950/70 border border-red-800 text-red-300 hover:bg-red-900/60 text-xs font-semibold flex items-center space-x-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Reset to Pending</span>
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTeam(null)}
+                    disabled={savingTeamEdit}
+                    className="px-4 py-2 rounded-xl bg-neutral-800 text-neutral-300 text-xs font-semibold hover:bg-neutral-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingTeamEdit}
+                    className="px-5 py-2 rounded-xl bg-[#ff7a1a] hover:bg-[#e5680d] text-black text-xs font-bold shadow-md shadow-[#ff7a1a]/25"
+                  >
+                    {savingTeamEdit ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: EDIT ROUND DETAILS & PARAMETER RUBRICS */}
+      {/* ======================================================== */}
+      {editingRound && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-[#140f21] border border-[#3d2f5a] rounded-2xl p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-[#ffa95c] uppercase tracking-widest">
+                  ROUND CONFIGURATION & SCORING RUBRICS
+                </span>
+                <h3 className="text-base font-bold text-white mt-0.5">
+                  Configure {editingRound.label} (Round {editingRound.round_number})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingRound(null)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRoundEdit} className="space-y-4 pt-3 flex-1 overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-semibold text-neutral-300 uppercase mb-1">
+                    Round Label
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editRoundLabel}
+                    onChange={(e) => setEditRoundLabel(e.target.value)}
+                    className="w-full bg-[#1e172e] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#ff7a1a]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-300 uppercase mb-1">
+                    Max Marks
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    min="1"
+                    required
+                    value={editRoundMaxMarks}
+                    onChange={(e) => setEditRoundMaxMarks(e.target.value)}
+                    className="w-full bg-[#1e172e] border border-white/10 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#ff7a1a]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-white">
+                      Parameter-Wise Scoring Rubrics
+                    </label>
+                    <p className="text-[11px] text-neutral-400">
+                      Criteria judges evaluate during scoring. Sum of parameters should match Max Marks.
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={handleResetParamsToDefault}
+                      className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 text-[10px] font-semibold"
+                    >
+                      Reset to PPT Defaults
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddParamItem}
+                      className="px-2.5 py-1 rounded-lg bg-[#ff7a1a]/15 hover:bg-[#ff7a1a]/25 border border-[#ff7a1a]/30 text-[#ff7a1a] text-[10px] font-bold flex items-center space-x-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Parameter</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1">
+                  {editRoundParams.map((param, idx) => (
+                    <div
+                      key={param.id || idx}
+                      className="p-3 rounded-xl bg-[#191326] border border-white/5 space-y-2 relative group"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Parameter Name (e.g. Architecture)"
+                          value={param.name}
+                          onChange={(e) => handleParamItemChange(idx, 'name', e.target.value)}
+                          className="flex-1 bg-[#100b1a] border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white font-medium focus:outline-none focus:border-[#ff7a1a]"
+                        />
+                        <div className="flex items-center space-x-1.5 flex-shrink-0">
+                          <span className="text-[10px] font-mono text-neutral-400">Max:</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            required
+                            value={param.max}
+                            onChange={(e) => handleParamItemChange(idx, 'max', e.target.value)}
+                            className="w-16 bg-[#100b1a] border border-white/10 rounded-lg px-2 py-1.5 text-xs font-mono font-bold text-center text-[#ff7a1a] focus:outline-none focus:border-[#ff7a1a]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveParamItem(idx)}
+                            className="p-1 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-red-500/10"
+                            title="Remove Parameter"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Description / Guidance for judges..."
+                        value={param.desc || ''}
+                        onChange={(e) => handleParamItemChange(idx, 'desc', e.target.value)}
+                        className="w-full bg-[#100b1a] border border-white/5 rounded-lg px-2.5 py-1 text-[11px] text-neutral-300 placeholder-neutral-600 focus:outline-none focus:border-white/20"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Rubric Sum Indicator */}
+                {(() => {
+                  const paramSum = editRoundParams.reduce((acc, p) => acc + (Number(p.max) || 0), 0);
+                  const maxMarksNum = Number(editRoundMaxMarks) || 0;
+                  const isMatch = Math.abs(paramSum - maxMarksNum) < 0.01;
+                  return (
+                    <div
+                      className={`mt-2 p-2.5 rounded-xl border flex items-center justify-between text-xs font-mono ${
+                        isMatch
+                          ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                          : 'bg-amber-950/40 border-amber-600/40 text-amber-300'
+                      }`}
+                    >
+                      <span>
+                        Parameter Total: <strong>{paramSum.toFixed(2)}</strong> / Round Max:{' '}
+                        <strong>{maxMarksNum.toFixed(2)}</strong>
+                      </span>
+                      {isMatch ? (
+                        <span className="text-[11px] font-bold text-emerald-400">✓ Matches Max Marks</span>
+                      ) : (
+                        <span className="text-[11px] font-bold text-amber-400">
+                          ⚠ Difference: {(maxMarksNum - paramSum).toFixed(2)} marks
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingRound(null)}
+                  disabled={savingRoundEdit}
+                  className="px-4 py-2 rounded-xl bg-neutral-800 text-neutral-300 text-xs font-semibold hover:bg-neutral-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingRoundEdit}
+                  className="px-5 py-2 rounded-xl bg-[#ff7a1a] hover:bg-[#e5680d] text-black text-xs font-bold shadow-md shadow-[#ff7a1a]/25"
+                >
+                  {savingRoundEdit ? 'Saving...' : 'Save Round & Rubrics'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

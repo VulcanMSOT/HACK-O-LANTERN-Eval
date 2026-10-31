@@ -20,6 +20,8 @@ export default function EvaluatorDashboard() {
   // Scoring Modal state
   const [activeTeam, setActiveTeam] = useState(null);
   const [scoreInput, setScoreInput] = useState('');
+  const [scoringMode, setScoringMode] = useState('parameters'); // 'parameters' | 'direct'
+  const [paramScores, setParamScores] = useState({});
   const [scoreError, setScoreError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successToast, setSuccessToast] = useState('');
@@ -105,8 +107,33 @@ export default function EvaluatorDashboard() {
   // Open Score Modal
   const handleOpenScoreModal = (team) => {
     setActiveTeam(team);
-    setScoreInput(team.myScore?.value !== undefined ? String(team.myScore.value) : '');
+    const roundParams = currentRoundObj.parameters || [];
+    const savedParams = team.myScore?.parameters || {};
+
+    const initialParams = {};
+    if (roundParams && roundParams.length > 0) {
+      roundParams.forEach((p) => {
+        initialParams[p.id] = savedParams[p.id] !== undefined ? Number(savedParams[p.id]) : 0;
+      });
+      setParamScores(initialParams);
+      setScoringMode(team.myScore?.parameters ? 'parameters' : (roundParams.length > 0 ? 'parameters' : 'direct'));
+    } else {
+      setParamScores({});
+      setScoringMode('direct');
+    }
+
+    setScoreInput(team.myScore?.value !== undefined ? String(team.myScore.value) : (roundParams.length > 0 && !team.myScore ? '0' : ''));
     setScoreError('');
+  };
+
+  const handleParamScoreChange = (paramId, rawVal, paramMax) => {
+    const num = Math.max(0, Math.min(Number(paramMax) || 0, Number(rawVal) || 0));
+    const next = { ...paramScores, [paramId]: num };
+    setParamScores(next);
+
+    const total = Object.values(next).reduce((acc, v) => acc + (Number(v) || 0), 0);
+    const rounded = Math.round(total * 100) / 100;
+    setScoreInput(String(rounded));
   };
 
   // Handle QR Scan
@@ -157,6 +184,7 @@ export default function EvaluatorDashboard() {
           teamId: activeTeam.id,
           roundNumber: selectedRound,
           value: val,
+          parameters: scoringMode === 'parameters' ? paramScores : null,
         }),
       });
 
@@ -424,7 +452,7 @@ export default function EvaluatorDashboard() {
       {/* Scoring Modal */}
       {activeTeam && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#141414] border border-[#2a2a2a] rounded-2xl p-5 shadow-2xl relative">
+          <div className="w-full max-w-lg bg-[#141414] border border-[#2a2a2a] rounded-2xl p-5 shadow-2xl relative max-h-[90vh] flex flex-col">
             <button
               onClick={() => setActiveTeam(null)}
               className="absolute right-4 top-4 text-neutral-400 hover:text-white"
@@ -432,23 +460,32 @@ export default function EvaluatorDashboard() {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="mb-4">
+            <div className="mb-3">
               <span className="font-mono text-xs font-bold text-[#ff7a1a]">{activeTeam.id}</span>
               <h2 className="text-lg font-bold text-white mt-0.5">{activeTeam.name}</h2>
-              <div className="text-xs text-neutral-400 mt-1">
-                {currentRoundObj.label} • Max Marks:{' '}
-                <span className="font-bold text-white">{currentRoundObj.max_marks ?? '—'}</span>
-              </div>
-              <div className="text-xs text-neutral-400 mt-0.5">
-                Evaluators:{' '}
-                <span className="font-medium text-neutral-300">
-                  {activeTeam.marksCount} of {activeTeam.limit} scored
+              {activeTeam.problemStatement && (
+                <div className="mt-1.5 p-2 rounded-xl bg-white/5 border border-white/10 text-xs">
+                  <div className="text-[10px] font-mono text-[#ffa95c] uppercase font-bold">Allocated Track</div>
+                  <div className="text-neutral-200 mt-0.5 line-clamp-2">{activeTeam.problemStatement}</div>
+                </div>
+              )}
+              <div className="flex items-center space-x-3 text-xs text-neutral-400 mt-2">
+                <span>
+                  {currentRoundObj.label} • Max Marks:{' '}
+                  <strong className="text-white">{currentRoundObj.max_marks ?? '—'}</strong>
+                </span>
+                <span>•</span>
+                <span>
+                  Evaluators:{' '}
+                  <strong className="text-neutral-300">
+                    {activeTeam.marksCount} of {activeTeam.limit}
+                  </strong>
                 </span>
               </div>
             </div>
 
             {scoreError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-950/50 border border-red-800 text-red-200 text-xs font-medium flex items-start space-x-2">
+              <div className="mb-3 p-3 rounded-xl bg-red-950/50 border border-red-800 text-red-200 text-xs font-medium flex items-start space-x-2">
                 <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                 <span>{scoreError}</span>
               </div>
@@ -463,77 +500,179 @@ export default function EvaluatorDashboard() {
                 This team already has {activeTeam.limit} evaluators in this round.
               </div>
             ) : (
-              <form onSubmit={handleSubmitScore} className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
-                      Enter Marks
-                    </label>
-                    <span className="text-[11px] font-mono font-bold text-[#ff7a1a]">
-                      Max: {currentRoundObj.max_marks ?? 10}
-                    </span>
+              <form onSubmit={handleSubmitScore} className="space-y-4 flex-1 overflow-y-auto pr-1">
+                {/* Scoring Mode Switcher if Round has parameters */}
+                {currentRoundObj.parameters && currentRoundObj.parameters.length > 0 && (
+                  <div className="flex rounded-xl bg-neutral-900 p-1 border border-white/10 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setScoringMode('parameters')}
+                      className={`flex-1 py-1.5 rounded-lg transition-all ${
+                        scoringMode === 'parameters'
+                          ? 'bg-[#ff7a1a] text-black font-bold shadow'
+                          : 'text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      Parameter Rubrics ({currentRoundObj.parameters.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScoringMode('direct')}
+                      className={`flex-1 py-1.5 rounded-lg transition-all ${
+                        scoringMode === 'direct'
+                          ? 'bg-[#ff7a1a] text-black font-bold shadow'
+                          : 'text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      Direct Total Input
+                    </button>
                   </div>
+                )}
 
-                  <input
-                    type="number"
-                    step="any"
-                    min="0"
-                    max={currentRoundObj.max_marks ?? 10}
-                    required
-                    autoFocus
-                    value={scoreInput}
-                    onChange={(e) => setScoreInput(e.target.value)}
-                    placeholder="0"
-                    className="w-full bg-[#1c1c1c] border border-white/10 rounded-2xl px-4 py-3 text-3xl font-mono font-black text-center text-white focus:outline-none focus:border-[#ff7a1a] focus:ring-2 focus:ring-[#ff7a1a]/30 shadow-inner transition-all"
-                  />
+                {/* MODE A: PARAMETER WISE MARKING */}
+                {scoringMode === 'parameters' && currentRoundObj.parameters && currentRoundObj.parameters.length > 0 ? (
+                  <div className="space-y-3">
+                    {currentRoundObj.parameters.map((param) => {
+                      const curVal = paramScores[param.id] !== undefined ? paramScores[param.id] : 0;
+                      return (
+                        <div
+                          key={param.id}
+                          className="p-3 rounded-xl bg-[#1a1a1a] border border-white/5 space-y-2"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="text-xs font-bold text-white">{param.name}</div>
+                              {param.desc && (
+                                <div className="text-[11px] text-neutral-400 mt-0.5">{param.desc}</div>
+                              )}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <span className="font-mono text-sm font-bold text-[#ff7a1a]">{curVal}</span>
+                              <span className="text-[10px] text-neutral-500 font-mono"> / {param.max}m</span>
+                            </div>
+                          </div>
 
-                  {/* Rapid Score Quick Increment Chips */}
-                  <div className="flex items-center justify-center space-x-1.5 mt-3">
-                    {[1, 2, 5].map((inc) => (
+                          {/* Quick Chips & Slider for Parameter */}
+                          <div className="flex items-center space-x-1.5 pt-1">
+                            <input
+                              type="range"
+                              min="0"
+                              max={param.max}
+                              step="0.25"
+                              value={curVal}
+                              onChange={(e) => handleParamScoreChange(param.id, e.target.value, param.max)}
+                              className="flex-1 accent-[#ff7a1a] h-1.5 bg-neutral-800 rounded-lg cursor-pointer"
+                            />
+                            <div className="flex items-center space-x-1 flex-shrink-0">
+                              {[0, Math.round((param.max / 2) * 10) / 10, param.max].map((chipVal, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => handleParamScoreChange(param.id, chipVal, param.max)}
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
+                                    curVal === chipVal
+                                      ? 'bg-[#ff7a1a] text-black border-[#ff7a1a]'
+                                      : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-white/5'
+                                  }`}
+                                >
+                                  {chipVal}m
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Calculated Total Summary Card */}
+                    <div className="p-3.5 rounded-xl bg-[#20182b] border border-[#ff7a1a]/40 shadow-inner flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#ffa95c]">
+                          Calculated Total Score
+                        </div>
+                        <div className="text-xs text-neutral-300">
+                          Sum of all parameter criteria
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-2xl font-black font-mono text-white">{scoreInput || 0}</span>
+                        <span className="text-xs font-mono text-neutral-400 font-bold"> / {currentRoundObj.max_marks ?? 10}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* MODE B: DIRECT NUMBER INPUT */
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                        Enter Total Marks
+                      </label>
+                      <span className="text-[11px] font-mono font-bold text-[#ff7a1a]">
+                        Max: {currentRoundObj.max_marks ?? 10}
+                      </span>
+                    </div>
+
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      max={currentRoundObj.max_marks ?? 10}
+                      required
+                      autoFocus
+                      value={scoreInput}
+                      onChange={(e) => setScoreInput(e.target.value)}
+                      placeholder="0"
+                      className="w-full bg-[#1c1c1c] border border-white/10 rounded-2xl px-4 py-3 text-3xl font-mono font-black text-center text-white focus:outline-none focus:border-[#ff7a1a] focus:ring-2 focus:ring-[#ff7a1a]/30 shadow-inner transition-all"
+                    />
+
+                    {/* Rapid Score Quick Increment Chips */}
+                    <div className="flex items-center justify-center space-x-1.5 mt-3">
+                      {[1, 2, 5].map((inc) => (
+                        <button
+                          key={inc}
+                          type="button"
+                          onClick={() => {
+                            const current = Number(scoreInput) || 0;
+                            const max = Number(currentRoundObj.max_marks || 10);
+                            setScoreInput(String(Math.min(max, current + inc)));
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-xs font-mono font-bold text-neutral-200 border border-white/5 transition-transform"
+                        >
+                          +{inc}
+                        </button>
+                      ))}
                       <button
-                        key={inc}
                         type="button"
                         onClick={() => {
-                          const current = Number(scoreInput) || 0;
-                          const max = Number(currentRoundObj.max_marks || 10);
-                          setScoreInput(String(Math.min(max, current + inc)));
+                          if (currentRoundObj.max_marks !== null) {
+                            setScoreInput(String(currentRoundObj.max_marks));
+                          }
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-xs font-mono font-bold text-neutral-200 border border-white/5 transition-transform"
+                        className="px-3 py-1.5 rounded-lg bg-[#ff7a1a]/15 hover:bg-[#ff7a1a]/25 text-[#ff7a1a] active:scale-95 text-xs font-mono font-bold border border-[#ff7a1a]/30 transition-transform"
                       >
-                        +{inc}
+                        Max
                       </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (currentRoundObj.max_marks !== null) {
-                          setScoreInput(String(currentRoundObj.max_marks));
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-[#ff7a1a]/15 hover:bg-[#ff7a1a]/25 text-[#ff7a1a] active:scale-95 text-xs font-mono font-bold border border-[#ff7a1a]/30 transition-transform"
-                    >
-                      Max
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setScoreInput('0')}
-                      className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-xs font-mono font-bold text-neutral-400 border border-white/5 transition-transform"
-                    >
-                      Reset
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setScoreInput('0')}
+                        className="px-2.5 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-xs font-mono font-bold text-neutral-400 border border-white/5 transition-transform"
+                      >
+                        Reset
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-[#ff7a1a] hover:bg-[#e5680d] active:scale-[0.97] text-black font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-[#ff7a1a]/25 disabled:opacity-50"
+                  className="w-full bg-[#ff7a1a] hover:bg-[#e5680d] active:scale-[0.97] text-black font-extrabold py-3.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-[#ff7a1a]/25 disabled:opacity-50 mt-2"
                 >
                   {submitting
                     ? 'Recording Mark...'
                     : activeTeam.myScore
-                    ? 'Update My Mark'
-                    : 'Confirm & Submit Mark'}
+                    ? `Update Mark (${scoreInput || 0} pts)`
+                    : `Confirm & Submit Mark (${scoreInput || 0} pts)`}
                 </button>
               </form>
             )}
