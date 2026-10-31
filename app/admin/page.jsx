@@ -19,6 +19,7 @@ import {
   Trash2,
   Lock,
   Unlock,
+  X,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
