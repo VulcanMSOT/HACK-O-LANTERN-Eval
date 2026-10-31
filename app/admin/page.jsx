@@ -669,7 +669,7 @@ export default function AdminDashboard() {
                   <thead>
                     <tr className="border-b border-[#262626] text-neutral-400">
                       <th className="py-2.5 px-3">Team</th>
-                      {matrixData.evaluators.map((e) => (
+                      {(matrixData?.evaluators || []).map((e) => (
                         <th key={e.id} className="py-2.5 px-3 font-mono text-center">
                           {e.username}
                         </th>
@@ -678,8 +678,8 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#1e1e1e]">
-                    {matrixData.matrix.map((row) => {
-                      const count = row.marks.filter((m) => m !== null).length;
+                    {(Array.isArray(matrixData?.matrix) ? matrixData.matrix : []).map((row) => {
+                      const count = (row?.marks || []).filter((m) => m !== null).length;
                       return (
                         <tr key={row.teamId} className="hover:bg-[#181818]">
                           <td className="py-2.5 px-3 whitespace-nowrap">
@@ -687,8 +687,8 @@ export default function AdminDashboard() {
                             <span className="font-medium text-white">{row.teamName}</span>
                           </td>
 
-                          {matrixData.evaluators.map((ev, idx) => {
-                            const mark = row.marks[idx];
+                          {(matrixData?.evaluators || []).map((ev, idx) => {
+                            const mark = row?.marks?.[idx] || null;
                             return (
                               <td key={ev.id} className="py-2.5 px-3 text-center">
                                 {mark ? (
@@ -832,7 +832,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#1e1e1e]">
-                      {standingsData.standings.map((team, idx) => {
+                      {(standingsData?.standings || []).map((team, idx) => {
                         const isFinalist = team.status === 'finalist';
                         const isDropped = team.status === 'dropped';
                         const isTop10 = idx < 10;
@@ -1245,7 +1245,7 @@ export default function AdminDashboard() {
                     teams):
                   </div>
                   <div className="text-[11px] text-neutral-300">
-                    {standingsData.tieAtCut.teams.map((t) => `${t.name} (${t.id})`).join(', ')}
+                    {(standingsData?.tieAtCut?.teams || []).map((t) => `${t.name} (${t.id})`).join(', ')}
                   </div>
                   <div className="space-y-1">
                     <label className="flex items-center space-x-2">
