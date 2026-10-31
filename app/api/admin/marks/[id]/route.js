@@ -87,7 +87,7 @@ export async function PUT(request, { params }) {
       'SELECT max_marks FROM rounds WHERE round_number = $1',
       [mark.round_number]
     );
-    const maxMarks = Number(roundRes.rows[0]?.max_marks || 100);
+    const maxMarks = Number(roundRes.rows[0]?.max_marks || 10);
     if (numValue > maxMarks) {
       await client.query('ROLLBACK');
       return NextResponse.json({ error: `Mark cannot exceed round maximum of ${maxMarks}.` }, { status: 400 });

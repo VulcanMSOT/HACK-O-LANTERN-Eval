@@ -35,7 +35,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Round not found.' }, { status: 404 });
     }
     const round = roundRes.rows[0];
-    const maxMarks = Number(round.max_marks || 100);
+    const maxMarks = Number(round.max_marks || 10);
     const limit = round.evaluators_per_team || 3;
 
     if (numValue > maxMarks) {

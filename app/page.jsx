@@ -137,7 +137,7 @@ export default function EvaluatorDashboard() {
 
     setScoreError('');
     const val = Number(scoreInput);
-    const max = Number(currentRoundObj.max_marks || 100);
+    const max = Number(currentRoundObj.max_marks || 10);
 
     if (isNaN(val) || val < 0) {
       setScoreError('Please enter a valid non-negative number.');
@@ -470,7 +470,7 @@ export default function EvaluatorDashboard() {
                       Enter Marks
                     </label>
                     <span className="text-[11px] font-mono font-bold text-[#ff7a1a]">
-                      Max: {currentRoundObj.max_marks ?? 100}
+                      Max: {currentRoundObj.max_marks ?? 10}
                     </span>
                   </div>
 
@@ -478,7 +478,7 @@ export default function EvaluatorDashboard() {
                     type="number"
                     step="any"
                     min="0"
-                    max={currentRoundObj.max_marks ?? 100}
+                    max={currentRoundObj.max_marks ?? 10}
                     required
                     autoFocus
                     value={scoreInput}
@@ -489,13 +489,13 @@ export default function EvaluatorDashboard() {
 
                   {/* Rapid Score Quick Increment Chips */}
                   <div className="flex items-center justify-center space-x-1.5 mt-3">
-                    {[1, 5, 10].map((inc) => (
+                    {[1, 2, 5].map((inc) => (
                       <button
                         key={inc}
                         type="button"
                         onClick={() => {
                           const current = Number(scoreInput) || 0;
-                          const max = Number(currentRoundObj.max_marks || 100);
+                          const max = Number(currentRoundObj.max_marks || 10);
                           setScoreInput(String(Math.min(max, current + inc)));
                         }}
                         className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-xs font-mono font-bold text-neutral-200 border border-white/5 transition-transform"
