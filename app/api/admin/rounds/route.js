@@ -16,12 +16,12 @@ export async function GET() {
   }
 }
 
-export async function POST(request) {
+async function handleRoundUpdate(request) {
   let client;
   try {
     const admin = await requireAdmin();
     const body = await request.json();
-    const { roundNumber, action, maxMarks, evaluatorsPerTeam, finalRankingRule } = body;
+    const { roundNumber, action, status, maxMarks, evaluatorsPerTeam, finalRankingRule } = body;
 
     const roundNum = Number(roundNumber);
     if (!roundNum || roundNum < 1 || roundNum > 4) {
@@ -38,8 +38,18 @@ export async function POST(request) {
     }
     const currentRound = roundRes.rows[0];
 
+    // Determine target action
+    let effectiveAction = action;
+    if (!effectiveAction) {
+      if (status === 'locked') {
+        effectiveAction = 'lock';
+      } else if (status === 'open') {
+        effectiveAction = currentRound.status === 'locked' ? 'reopen' : 'open';
+      }
+    }
+
     // Configure Round
-    if (action === 'configure') {
+    if (effectiveAction === 'configure') {
       const parsedMax = maxMarks !== undefined ? (maxMarks === null ? null : Number(maxMarks)) : currentRound.max_marks;
       const parsedEvPerTeam = evaluatorsPerTeam ? Number(evaluatorsPerTeam) : currentRound.evaluators_per_team;
 
@@ -66,8 +76,17 @@ export async function POST(request) {
       return NextResponse.json({ ok: true, message: `Round ${roundNum} settings updated.` });
     }
 
+    // If maxMarks is provided during open/reopen, apply it
+    if (maxMarks && Number(maxMarks) > 0) {
+      await client.query('UPDATE rounds SET max_marks = $1, updated_at = NOW() WHERE round_number = $2', [
+        Number(maxMarks),
+        roundNum,
+      ]);
+      currentRound.max_marks = Number(maxMarks);
+    }
+
     // Open Round
-    if (action === 'open') {
+    if (effectiveAction === 'open') {
       if (!currentRound.max_marks || Number(currentRound.max_marks) <= 0) {
         await client.query('ROLLBACK');
         return NextResponse.json({ error: `Please set max marks for ${currentRound.label} before opening it.` }, { status: 400 });
@@ -85,23 +104,20 @@ export async function POST(request) {
         }
       }
 
-      // Ensure no other round is open at the same time
-      await client.query("UPDATE rounds SET status = 'locked', updated_at = NOW() WHERE status = 'open' AND round_number != $1", [roundNum]);
-
       await client.query("UPDATE rounds SET status = 'open', updated_at = NOW() WHERE round_number = $1", [roundNum]);
       await client.query('COMMIT');
       return NextResponse.json({ ok: true, message: `${currentRound.label} is now OPEN.` });
     }
 
     // Lock Round
-    if (action === 'lock') {
+    if (effectiveAction === 'lock') {
       await client.query("UPDATE rounds SET status = 'locked', updated_at = NOW() WHERE round_number = $1", [roundNum]);
       await client.query('COMMIT');
       return NextResponse.json({ ok: true, message: `${currentRound.label} is now LOCKED.` });
     }
 
     // Reopen Locked Round (Logged)
-    if (action === 'reopen') {
+    if (effectiveAction === 'reopen') {
       const reason = String(body.reason || '').trim();
       if (!reason) {
         await client.query('ROLLBACK');
@@ -110,7 +126,6 @@ export async function POST(request) {
 
       await client.query("UPDATE rounds SET status = 'open', updated_at = NOW() WHERE round_number = $1", [roundNum]);
 
-      // Log in mark_history or audit log
       await client.query(
         `INSERT INTO mark_history (team_id, evaluator_id, round_number, action, changed_by, reason)
          VALUES ('VHK-1011', $1, $2, 'reopen_round', $3, $4)`,
@@ -122,7 +137,7 @@ export async function POST(request) {
     }
 
     await client.query('ROLLBACK');
-    return NextResponse.json({ error: 'Unknown action.' }, { status: 400 });
+    return NextResponse.json({ error: 'Unknown action or invalid round status request.' }, { status: 400 });
   } catch (err) {
     if (client) await client.query('ROLLBACK');
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -131,3 +146,10 @@ export async function POST(request) {
   }
 }
 
+export async function POST(request) {
+  return handleRoundUpdate(request);
+}
+
+export async function PUT(request) {
+  return handleRoundUpdate(request);
+}
