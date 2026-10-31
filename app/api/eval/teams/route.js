@@ -23,8 +23,14 @@ export async function GET(request) {
 
     // 2. Fetch eligible teams
     const teamsQuery = isFinal
-      ? "SELECT id, name, normalised_name, status FROM teams WHERE status = 'finalist' ORDER BY id ASC"
-      : "SELECT id, name, normalised_name, status FROM teams WHERE status != 'dropped' ORDER BY id ASC";
+      ? `SELECT t.id, t.name, t.normalised_name, t.status, pss.problem_statement, pss.track_number
+         FROM teams t
+         LEFT JOIN problem_statement_submissions pss ON t.id = pss.team_id
+         WHERE t.status = 'finalist' ORDER BY t.id ASC`
+      : `SELECT t.id, t.name, t.normalised_name, t.status, pss.problem_statement, pss.track_number
+         FROM teams t
+         LEFT JOIN problem_statement_submissions pss ON t.id = pss.team_id
+         WHERE t.status != 'dropped' ORDER BY t.id ASC`;
 
     const teamsRes = await query(teamsQuery);
     const teams = teamsRes.rows;
@@ -58,6 +64,8 @@ export async function GET(request) {
         id: t.id,
         name: t.name,
         normalised_name: t.normalised_name,
+        problemStatement: t.problem_statement,
+        trackNumber: t.track_number,
         status: t.status,
         scoredCount,
         marksCount: scoredCount,

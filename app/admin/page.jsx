@@ -60,6 +60,12 @@ export default function AdminDashboard() {
   const [restoreTeamId, setRestoreTeamId] = useState('');
   const [restoreReason, setRestoreReason] = useState('');
 
+  // Problem Statement Selection state
+  const [psData, setPsData] = useState(null);
+  const [togglingPs, setTogglingPs] = useState(false);
+  const [showPsModal, setShowPsModal] = useState(false);
+  const [psSearch, setPsSearch] = useState('');
+
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
@@ -102,6 +108,37 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  // 2b. Fetch problem statement status
+  const fetchPsData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/problem-statement/list');
+      if (res.ok) {
+        const d = await res.json();
+        setPsData(d);
+      }
+    } catch (e) {
+      console.error('Fetch ps err:', e);
+    }
+  }, []);
+
+  const handleToggleProblemStatement = async () => {
+    setTogglingPs(true);
+    try {
+      const res = await fetch('/api/admin/problem-statement/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Failed to toggle selection window');
+      showToast(d.message);
+      fetchPsData();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setTogglingPs(false);
+    }
+  };
+
   // 3. Fetch tab specific data
   const fetchTabData = useCallback(async () => {
     setLoading(true);
@@ -126,8 +163,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user) {
       fetchRoundsAndSettings();
+      fetchPsData();
     }
-  }, [user, fetchRoundsAndSettings]);
+  }, [user, fetchRoundsAndSettings, fetchPsData]);
 
   useEffect(() => {
     if (user) {
@@ -420,6 +458,134 @@ export default function AdminDashboard() {
               <p className="text-xs text-neutral-400 mt-0.5">
                 Manage round progression, set max marks, lock or reopen scoring rounds.
               </p>
+            </div>
+
+            {/* Phase 0: Problem Statement Selection Control */}
+            <div className="p-5 sm:p-6 rounded-2xl bg-[#151022] border border-[#3d2f5c] shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start space-x-3.5">
+                  <div
+                    className={`p-2.5 rounded-xl border mt-0.5 flex-shrink-0 ${
+                      psData?.isOpen
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                        : 'bg-red-500/15 border-red-500/40 text-red-400'
+                    }`}
+                  >
+                    {psData?.isOpen ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold text-[#ffa95c] uppercase tracking-widest">
+                        Phase 0 • Student Track Selection
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${
+                          psData?.isOpen
+                            ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
+                            : 'bg-red-950/80 border-red-500/40 text-red-300'
+                        }`}
+                      >
+                        {psData?.isOpen ? '● OPEN — SUBMISSIONS ALLOWED' : '● LOCKED — SUBMISSIONS BLOCKED'}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-bold text-white mt-1">Problem Statement Selection Window</h3>
+                    <p className="text-xs text-neutral-300 mt-1 leading-relaxed">
+                      {psData?.isOpen ? (
+                        <>
+                          The selection window is currently <strong className="text-emerald-300 font-bold">OPEN</strong>. Students can submit their chosen problem statement at{' '}
+                          <a
+                            href="/problem-statement"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline font-mono text-white hover:text-[#ff7a1a]"
+                          >
+                            /problem-statement
+                          </a>{' '}
+                          or{' '}
+                          <a
+                            href="/select"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline font-mono text-white hover:text-[#ff7a1a]"
+                          >
+                            /select
+                          </a>.
+                        </>
+                      ) : (
+                        <>
+                          The selection window is currently <strong className="text-red-300 font-bold">LOCKED</strong>. Students cannot submit or edit their problem statements.
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Primary Action Button */}
+                <div className="flex-shrink-0">
+                  <button
+                    onClick={handleToggleProblemStatement}
+                    disabled={togglingPs}
+                    className={`w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center justify-center space-x-2 transition-all shadow-md active:scale-95 ${
+                      psData?.isOpen
+                        ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-950/40'
+                        : 'bg-[#ff7a1a] hover:bg-[#e5680d] text-black shadow-[#ff7a1a]/20'
+                    }`}
+                  >
+                    {togglingPs ? (
+                      <span>Updating...</span>
+                    ) : psData?.isOpen ? (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        <span>Lock Selection Window</span>
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="w-4 h-4" />
+                        <span>Open Problem Statement Selection</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats & View Submissions Button */}
+              <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
+                <div className="flex items-center space-x-4">
+                  <span className="text-neutral-400">
+                    Total Teams: <strong className="text-white">{psData?.totalTeams || 33}</strong>
+                  </span>
+                  <span className="text-neutral-400">
+                    Submitted:{' '}
+                    <strong className="text-emerald-400 font-bold">
+                      {psData?.submittedCount || 0}
+                    </strong>
+                  </span>
+                  <span className="text-neutral-400">
+                    Pending:{' '}
+                    <strong className="text-amber-400 font-bold">
+                      {psData?.unsubmittedCount ?? 33}
+                    </strong>
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowPsModal(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-[#251e36] hover:bg-[#302747] border border-white/15 text-white text-[11px] font-bold transition-colors flex items-center space-x-1.5"
+                  >
+                    <span>View Submitted Teams</span>
+                    <span className="text-[#ffa95c]">&rarr;</span>
+                  </button>
+                  <a
+                    href="/problem-statement"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 text-[11px] font-medium transition-colors"
+                  >
+                    Open Student Page &nearr;
+                  </a>
+                </div>
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
@@ -1397,6 +1563,113 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL: VIEW PROBLEM STATEMENT SUBMISSIONS */}
+      {/* ======================================================== */}
+      {showPsModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-[#130f1e] border border-[#2d2540] rounded-2xl p-6 shadow-2xl relative max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div>
+                <div className="text-[10px] font-mono font-bold text-[#ffa95c] uppercase tracking-widest">
+                  ROSTER TRACK ALLOCATION
+                </div>
+                <h2 className="text-base font-bold text-white mt-0.5">
+                  Problem Statement Submissions
+                </h2>
+              </div>
+              <button
+                onClick={() => setShowPsModal(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search filter */}
+            <div className="py-3">
+              <input
+                type="text"
+                value={psSearch}
+                onChange={(e) => setPsSearch(e.target.value)}
+                placeholder="Search by team ID, name, or track..."
+                className="w-full bg-[#1b152b] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#ff7a1a]"
+              />
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-y-auto overflow-x-auto border border-white/5 rounded-xl bg-[#0e0a17]">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="sticky top-0 bg-[#161026] text-neutral-400 border-b border-white/10">
+                  <tr>
+                    <th className="py-2.5 px-3">Team</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3">Problem Statement / Track</th>
+                    <th className="py-2.5 px-3 text-right">Submitted</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {(psData?.teams || [])
+                    .filter((t) => {
+                      if (!psSearch.trim()) return true;
+                      const q = psSearch.toLowerCase();
+                      return (
+                        t.id.toLowerCase().includes(q) ||
+                        t.name.toLowerCase().includes(q) ||
+                        (t.problem_statement && t.problem_statement.toLowerCase().includes(q))
+                      );
+                    })
+                    .map((t) => (
+                      <tr key={t.id} className="hover:bg-white/5">
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className="font-mono text-[#ff7a1a] font-bold mr-2">{t.id}</span>
+                          <span className="font-medium text-white">{t.name}</span>
+                        </td>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          {t.submission_id ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-emerald-300">
+                              Confirmed
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-800 border border-white/10 text-neutral-400">
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          {t.problem_statement ? (
+                            <span className="text-neutral-200 font-mono text-[11px]">
+                              {t.problem_statement}
+                            </span>
+                          ) : (
+                            <span className="text-neutral-500 italic text-[11px]">Not chosen yet</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap text-[11px] font-mono text-neutral-400">
+                          {t.submitted_at ? new Date(t.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pt-4 flex justify-between items-center text-xs">
+              <span className="text-neutral-400 font-mono">
+                Showing {psData?.submittedCount || 0} of {psData?.totalTeams || 33} confirmed
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowPsModal(false)}
+                className="bg-[#ff7a1a] hover:bg-[#e5680d] text-black font-extrabold px-5 py-2 rounded-xl"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
