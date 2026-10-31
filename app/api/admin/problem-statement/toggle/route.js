@@ -33,3 +33,4 @@ export async function POST(request) {
     return NextResponse.json({ error: err.message }, { status: err.status || 500 });
   }
 }
+
