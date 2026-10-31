@@ -2,26 +2,24 @@ import { NextResponse } from 'next/server';
 import { requireEvaluator } from '@/lib/session';
 import { query } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request) {
   try {
     const user = await requireEvaluator();
+    const { searchParams } = new URL(request.url);
+    const roundNumber = Number(searchParams.get('round') || 1);
 
-    // 1. Get open round
-    const openRes = await query(
-      'SELECT round_number, label, max_marks, evaluators_per_team, status FROM rounds WHERE status = $1 ORDER BY round_number ASC LIMIT 1',
-      ['open']
+    const roundRes = await query(
+      'SELECT round_number, label, max_marks, evaluators_per_team, status FROM rounds WHERE round_number = $1',
+      [roundNumber]
     );
 
-    if (openRes.rows.length === 0) {
-      return NextResponse.json({
-        openRound: null,
-        teams: [],
-      });
+    const round = roundRes.rows[0] || null;
+    if (!round) {
+      return NextResponse.json({ round: null, teams: [] });
     }
 
-    const openRound = openRes.rows[0];
-    const isFinal = openRound.round_number === 4;
-    const limit = openRound.evaluators_per_team || 3;
+    const isFinal = round.round_number === 4;
+    const limit = round.evaluators_per_team || 3;
 
     // 2. Fetch eligible teams
     const teamsQuery = isFinal
@@ -36,7 +34,7 @@ export async function GET() {
       `SELECT team_id, evaluator_id, value
        FROM marks
        WHERE round_number = $1 AND removed = false`,
-      [openRound.round_number]
+      [round.round_number]
     );
 
     const teamMarksCount = new Map();
