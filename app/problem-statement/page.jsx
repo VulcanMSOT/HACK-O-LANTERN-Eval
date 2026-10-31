@@ -108,15 +108,26 @@ export default function ProblemStatementSelectionPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/problem-statement/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          teamId: selectedTeamId,
-          problemStatement: statementText,
-          trackNumber: trackNum,
-        }),
-      });
+      let res;
+      let attempts = 0;
+      while (attempts < 2) {
+        try {
+          res = await fetch('/api/problem-statement/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              teamId: selectedTeamId,
+              problemStatement: statementText,
+              trackNumber: trackNum,
+            }),
+          });
+          break;
+        } catch (netErr) {
+          attempts++;
+          if (attempts >= 2) throw netErr;
+          await new Promise((r) => setTimeout(r, 800));
+        }
+      }
 
       const data = await res.json();
       if (!res.ok) {
@@ -130,7 +141,11 @@ export default function ProblemStatementSelectionPage() {
       });
       fetchStatus();
     } catch (err) {
-      setErrorMsg(err.message);
+      if (err.name === 'TypeError' || err.message?.toLowerCase().includes('fetch')) {
+        setErrorMsg('Network glitch while saving. Please tap "Lock In Problem Statement" again — server is ready.');
+      } else {
+        setErrorMsg(err.message || 'Failed to submit. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
