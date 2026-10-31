@@ -92,7 +92,8 @@ export async function GET(request) {
     });
 
     return NextResponse.json({
-      openRound,
+      round,
+      openRound: round,
       teams: enrichedTeams,
     });
   } catch (err) {
