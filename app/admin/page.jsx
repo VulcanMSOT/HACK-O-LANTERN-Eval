@@ -868,14 +868,14 @@ export default function AdminDashboard() {
                           Scoring Rubrics (Parameters)
                         </span>
                         <span className="text-[#ffa95c] font-mono font-bold">
-                          {(r.parameters && Array.isArray(r.parameters) && r.parameters.length > 0 ? r.parameters : (DEFAULT_ROUND_RUBRICS[r.round_number] || [])).length} criteria · {r.max_marks ?? 10}m max
+                          {(r.parameters && Array.isArray(r.parameters) && r.parameters.length > 0 ? r.parameters : (DEFAULT_ROUND_RUBRICS[r.round_number] || [])).length} criteria · {r.max_marks ?? 10} pts max
                         </span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
                         {(r.parameters && Array.isArray(r.parameters) && r.parameters.length > 0 ? r.parameters : (DEFAULT_ROUND_RUBRICS[r.round_number] || [])).map((p, idx) => (
                           <div key={p.id || idx} className="flex items-center justify-between text-xs py-1 px-2.5 rounded-lg bg-white/5 border border-white/5">
                             <span className="text-neutral-300 font-medium truncate mr-2 text-[11px]">{p.name}</span>
-                            <span className="font-mono text-[#ff7a1a] font-bold flex-shrink-0 text-[11px]">{p.max}m</span>
+                            <span className="font-mono text-[#ff7a1a] font-bold flex-shrink-0 text-[11px]">{p.max} pts</span>
                           </div>
                         ))}
                       </div>

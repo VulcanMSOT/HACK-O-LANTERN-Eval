@@ -548,7 +548,7 @@ export default function EvaluatorDashboard() {
                             </div>
                             <div className="text-right flex-shrink-0">
                               <span className="font-mono text-sm font-bold text-[#ff7a1a]">{curVal}</span>
-                              <span className="text-[10px] text-neutral-500 font-mono"> / {param.max}m</span>
+                              <span className="text-[10px] text-neutral-500 font-mono"> / {param.max} pts</span>
                             </div>
                           </div>
 
@@ -564,18 +564,22 @@ export default function EvaluatorDashboard() {
                               className="flex-1 accent-[#ff7a1a] h-1.5 bg-neutral-800 rounded-lg cursor-pointer"
                             />
                             <div className="flex items-center space-x-1 flex-shrink-0">
-                              {[0, Math.round((param.max / 2) * 10) / 10, param.max].map((chipVal, i) => (
+                              {[
+                                { label: '0', val: 0 },
+                                { label: String(Math.round((param.max / 2) * 10) / 10), val: Math.round((param.max / 2) * 10) / 10 },
+                                { label: 'Max', val: param.max },
+                              ].map((chip, i) => (
                                 <button
                                   key={i}
                                   type="button"
-                                  onClick={() => handleParamScoreChange(param.id, chipVal, param.max)}
+                                  onClick={() => handleParamScoreChange(param.id, chip.val, param.max)}
                                   className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border transition-colors ${
-                                    curVal === chipVal
+                                    curVal === chip.val
                                       ? 'bg-[#ff7a1a] text-black border-[#ff7a1a]'
                                       : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border-white/5'
                                   }`}
                                 >
-                                  {chipVal}m
+                                  {chip.label}
                                 </button>
                               ))}
                             </div>
